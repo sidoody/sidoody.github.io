@@ -15,6 +15,7 @@
       <h1>Does GPT-5.2 get better at diagnosis when you ask it to think harder?</h1>
       <p class="byline">March 4, 2026</p>
 
+
       <p>
         I started this project thinking I would benchmark all the major models (GPT, Claude, Gemini, DeepSeek) on medical diagnosis. When I saw that OpenAI exposes a reasoning effort knob on GPT-5.2, which you can set to <code>none</code>, <code>low</code>, <code>medium</code>, <code>high</code>, and <code>xhigh</code>, I got distracted by a more interesting question: Does GPT-5.2 get better at clinical diagnosis when you ask it to think harder, and at what cost?
       </p>
@@ -26,7 +27,7 @@
       </p>
 
       <p>
-        I graded the final diagnosis with GPT-4.1 using the same rubric across all variants. I originally framed the analysis stepwise: <code>none</code> to <code>low</code>, then <code>low</code> to <code>medium</code>, then <code>medium</code> to <code>high</code>but it felt too narrow. In practice, if you are building a health AI product, you do not only care about adjacent steps, but also about real choices like <code>none</code> versus <code>high</code>, or <code>low</code> versus <code>high</code>. I decided to rebuild the reporting around all pairwise comparisons.
+        I graded the final diagnosis with GPT-4.1 using the same rubric across all variants. I originally framed the analysis stepwise: <code>none</code> to <code>low</code>, then <code>low</code> to <code>medium</code>, then <code>medium</code> to <code>high</code>, but it felt too narrow. In practice, if you are building a health AI product, you do not only care about adjacent steps, but also about real choices like <code>none</code> versus <code>high</code>, or <code>low</code> versus <code>high</code>. I decided to rebuild the reporting around all pairwise comparisons.
       </p>
 
       <h2>The results</h2>
@@ -71,6 +72,9 @@
       <p>
         Going from <code>none</code> to <code>high</code> improved diagnosis accuracy by about 4.9 percentage points. It also increased average latency from 2.6 seconds to 13.6 seconds, and pushed average total tokens from 614 to 1,088. In a production clinical system where a doctor is waiting for a response, 13.6 seconds per case is a long time vs 2.6 seconds.
       </p>
+           <p>
+  Most cases were concordant across settings. For <code>none</code> vs <code>high</code>, 765/897 (85.3%) cases had the same correctness outcome (both correct or both incorrect). The net lift came from the discordant subset (132/897, 14.7%): 88 cases flipped from incorrect to correct with <code>high</code>, while 44 flipped from correct to incorrect.
+</p>
 
       <h2>What was statistically strongest</h2>
 
@@ -92,7 +96,7 @@
       <h2>So what is the best setting?</h2>
 
       <p>
-        For highest accuracy, <code>high</code> wins. <code>medium</code> is the cheapest setting that still gives a Holm-significant improvement over <code>none</code>. If you care most about efficiency, <code>low</code> is probably the most interesting setting, but we didn't bear out statistical significance in this study.
+        For highest accuracy, <code>high</code> wins. <code>medium</code> is the lowest reasoning setting that still gives a Holm-significant improvement over <code>none</code>. If you care most about efficiency, <code>low</code> is probably the most interesting setting, but we didn't bear out statistical significance in this study.
       </p>
 
       <p>
@@ -101,9 +105,10 @@
 
       <h2>My take as a doctor</h2>
 
-      <p>
-        I am board certified and I have spent a lot of time reading case reports. These MedCaseReasoning cases are not routine clinical encounters, rather they are skewed toward rare-disease presentations. A 5 point accuracy improvement on hard diagnostic cases is not nothing. In a case where the differential diagnosis is genuinely difficult the extra reasoning time is buying the model a better shot at connecting the dots. That maps to my clinical intuition about how diagnostic reasoning works in humans too. Rushing through a complex case leads to more pattern-matching errors.
-      </p>
+    <p>
+  I am board certified and I have spent a lot of time reading case reports. These MedCaseReasoning cases are not routine clinical encounters, but rather are skewed toward rare-disease presentations. I still think the signal here is interesting, but I would be careful not to overinterpret it. Most cases were concordant across reasoning settings, and the net lift came from a relatively small discordant subset. To me, the more interesting next question is whether there are identifiable types of cases where additional reasoning helps enough to justify the added latency and cost.
+    </p>
+ 
 
       <h2>Why GPT-4.1 as the grader</h2>
 
@@ -147,7 +152,7 @@
 
       <ol>
         <li>Hand-audit a stratified sample of grader decisions</li>
-        <li>Do a real discordant-case error analysis (which specialties benefit most from reasoning?)</li>
+        <li>Do a real discordant-case error analysis (which cases benefit most from reasoning?)</li>
         <li>Run the same pipeline on Claude and Gemini</li>
          <li>Analyze the reasoning alignment scores captured alongside diagnosis correctness</li>
       </ol>
@@ -163,10 +168,13 @@
       <p>
         If you work on health AI and this kind of evaluation is useful, feel free to reach out.
       </p>
+
+      <p><em>Edited March 4, 2026 for clarity on concordant vs discordant cases; results unchanged.</em></p>
     </article>
   </main>
 </body>
 </html>
+
 
 
 
