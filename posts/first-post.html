@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>First post</title>
-  <meta name="description" content="First post">
+  <title>Does GPT-5.2 get better at diagnosis when you ask it to think harder?</title>
+  <meta name="description" content="I ran a reasoning effort ablation on GPT-5.2 across 897 paired clinical benchmark cases. More reasoning helped, but the tradeoff between accuracy, latency, and cost was not linear.">
   <link rel="stylesheet" href="/style.css">
 </head>
 <body>
@@ -12,12 +12,156 @@
     <p class="backlink"><a href="/">← home</a></p>
 
     <article>
-      <h1>First post</h1>
-      <p class="byline">March 2, 2026</p>
+      <h1>Does GPT-5.2 get better at diagnosis when you ask it to think harder?</h1>
+      <p class="byline">March 4, 2026</p>
 
       <p>
-        I missed having a plain little website.
+        I started this project thinking I would benchmark all the major models (GPT, Claude, Gemini, DeepSeek) on medical diagnosis. When I saw that OpenAI exposes a reasoning effort knob on GPT-5.2, which you can set to <code>none</code>, <code>low</code>, <code>medium</code>, <code>high</code>, and <code>xhigh</code>, I got distracted by a more interesting question: <strong>Does GPT-5.2 get better at clinical diagnosis when you ask it to think harder, and at what cost?</strong>
       </p>
+
+      <h2>The setup</h2>
+
+      <p>
+        I evaluated GPT-5.2 on 897 paired cases from <a href="https://huggingface.co/datasets/zou-lab/MedCaseReasoning">MedCaseReasoning</a>. Every case went through four reasoning settings: <code>none</code>, <code>low</code>, <code>medium</code>, and <code>high</code>. I left out <code>xhigh</code> for this version of the study. In early runs it was much slower, token usage was more variable, and it made the project harder to finish cleanly. I would rather ship a complete four-setting study and potentially add xhigh later.
+      </p>
+
+      <p>
+        I graded the final diagnosis with GPT-4.1 using the same rubric across all variants. I originally framed the analysis stepwise: <code>none -&gt; low</code>, then <code>low -&gt; medium</code>, then <code>medium -&gt; high</code> but it felt too narrow. In practice, if you are building a health AI product, you do not only care about adjacent steps, but also about real choices like <code>none</code> versus <code>high</code>, or <code>low</code> versus <code>high</code>. I decided to rebuild the reporting around all pairwise comparisons.
+      </p>
+
+      <h2>The results</h2>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Setting</th>
+            <th>Accuracy</th>
+            <th>Tokens (avg)</th>
+            <th>Latency (avg)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>none</code></td>
+            <td>63.9%</td>
+            <td>614</td>
+            <td>2.6s</td>
+          </tr>
+          <tr>
+            <td><code>low</code></td>
+            <td>66.4%</td>
+            <td>782</td>
+            <td>5.5s</td>
+          </tr>
+          <tr>
+            <td><code>medium</code></td>
+            <td>67.3%</td>
+            <td>935</td>
+            <td>10.8s</td>
+          </tr>
+          <tr>
+            <td><code>high</code></td>
+            <td>68.8%</td>
+            <td>1,088</td>
+            <td>13.6s</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <p>
+        Going from <code>none</code> to <code>high</code> improved diagnosis accuracy by about 4.9 percentage points. It also increased average latency from 2.6 seconds to 13.6 seconds, and pushed average total tokens from 614 to 1,088. In a production clinical system where a doctor is waiting for a response, 13.6 seconds per case is a long time vs 2.6 seconds.
+      </p>
+
+      <h2>What was statistically strongest</h2>
+
+      <p>
+        I used exact McNemar tests across all pairs then applied Holm correction for multiple comparisons. The pairs that held up best were:
+      </p>
+
+      <ul>
+        <li><strong><code>none</code> vs <code>high</code></strong>: significant, p &lt; 0.001</li>
+        <li><strong><code>none</code> vs <code>medium</code></strong>: significant, p = 0.029</li>
+        <li><strong><code>none</code> vs <code>low</code></strong>: not significant after correction, p = 0.15</li>
+        <li><strong>Adjacent steps</strong> like <code>low</code> vs <code>medium</code> and <code>medium</code> vs <code>high</code> were not significant after correction</li>
+      </ul>
+
+      <p>
+        The accuracy curve is monotonic with every step up in reasoning improving raw benchmark accuracy. Once you correct for multiple comparisons, the strongest evidence is for the cumulative gains from <code>none</code> to <code>medium</code> and from <code>none</code> to <code>high</code>. 
+      </p>
+
+      <h2>So what is the best setting?</h2>
+
+      <p>
+        For <strong>highest accuracy</strong>, <code>high</code> wins. For <strong>best statistical evidence over no reasoning</strong>, then <code>medium</code> is the cheapest setting that still gives a Holm-significant improvement over <code>none</code>. If you care most about efficiency, <code>low</code> is probably the most interesting setting.
+      </p>
+
+      <p>
+        <code>low</code> captures about half of the total accuracy gain from <code>none</code> to <code>high</code>, while adding far less latency and token cost than going all the way to <code>high</code>. It is not the strongest statistical result after correction, but it may still be the most attractive product decision if you care about responsiveness and cost. The most realistic deployment policy is probably not one universal setting. It is probably wiser to use a cheaper default and escalate to more reasoning for harder or higher-risk cases.
+      </p>
+
+      <h2>My take as a doctor</h2>
+
+      <p>
+        I am board certified and I have spent a lot of time reading case reports. These MedCaseReasoning cases are not routine clinical encounters, rather they are skewed toward rare-disease presentations. A 5 point accuracy improvement on hard diagnostic cases is not nothing. In a case where the differential diagnosis is genuinely difficult the extra reasoning time is buying the model a better shot at connecting the dots. That maps to my clinical intuition about how diagnostic reasoning works in humans too. Rushing through a complex case leads to more pattern-matching errors.
+      </p>
+
+      <h2>Why GPT-4.1 as the grader</h2>
+
+      <p>
+        GPT-4.1 is the same model OpenAI uses as the automated grader in <a href="https://openai.com/index/healthbench/">HealthBench</a>, their flagship clinical evaluation framework. In the HealthBench meta-evaluation GPT-4.1 achieved a macro F1 of 0.71 in agreement with physician evaluations, which is comparable to inter-physician agreement. It exceeded the average physician grading score in five out of seven evaluation themes. I held it fixed across all variants.
+      </p>
+
+      <h2>How I built this</h2>
+
+      <p>
+        <strong>Paired design.</strong> Every case was run through all four variants. This means I can use McNemar's test (paired binary outcomes) instead of comparing independent samples. That is a more powerful comparison and it is the right statistical choice for this setup.
+      </p>
+
+      <p>
+        <strong>Immutable outputs.</strong> The raw model responses and grading scores are committed to the repo and never modified by the reporting pipeline. The analysis layer reads from those files and generates everything else. If you want to audit the numbers, the source of truth is right there.
+      </p>
+
+      <p>
+        <strong>All-pairs comparison.</strong> Earlier versions of this project only compared adjacent steps. That was too narrow. The current analysis compares every pair, because in practice you are often choosing between <code>none</code> and <code>high</code>, not between <code>medium</code> and <code>high</code>.
+      </p>
+
+      <h2>Limitations</h2>
+
+      <p>
+        This is not a clinical deployment paper, a safety claim, or a physician-adjudicated benchmark.
+      </p>
+
+      <p>
+        <strong>Benchmark skew.</strong> MedCaseReasoning is heavily tilted toward complex diagnostic cases from published case reports. These are not representative of the general case mix a clinician sees day to day. The accuracy numbers here are probably lower than what you would see on routine presentations.
+      </p>
+
+      <p>
+        <strong>No physician audit yet.</strong> GPT-4.1 has published physician-agreement data from HealthBench (macro F1 = 0.71) but it has not been validated against physician review on this specific dataset.
+      </p>
+
+      <p>
+        <strong>Single model family.</strong> This is GPT-5.2 only. I started this project wanting to compare across model families and I still plan to. 
+      </p>
+
+      <h2>What I would do next</h2>
+
+      <ol>
+        <li>Hand-audit a stratified sample of grader decisions</li>
+        <li>Do a real discordant-case error analysis (which specialties benefit most from reasoning?)</li>
+        <li>Run the same pipeline on Claude and Gemini</li>
+         <li>Analyze the reasoning alignment scores captured alongside diagnosis correctness</li>
+      </ol>
+
+      <h2>The repo</h2>
+
+      <p>
+        If you want to check out the data or rerun the reporting pipeline, the repo is here:
+        <a href="https://github.com/sidoody/gpt-5.2-reasoning-ablation-v1">github.com/sidoody/gpt-5.2-reasoning-ablation-v1</a>.
+        It contains the committed raw model outputs, the committed grading files, and a deterministic reporting pipeline. You can regenerate the analysis without rerunning inference.
+      </p>
+
+      <p>
+        If you work on health AI and this kind of evaluation is useful, feel free to reach out.
       </p>
     </article>
   </main>
