@@ -79,10 +79,10 @@
       </p>
 
       <ul>
-        <li><strong><code>none</code> vs <code>high</code></strong>: significant, p &lt; 0.001</li>
-        <li><strong><code>none</code> vs <code>medium</code></strong>: significant, p = 0.029</li>
-        <li><strong><code>none</code> vs <code>low</code></strong>: not significant after correction, p = 0.15</li>
-        <li><strong>Adjacent steps</strong> like <code>low</code> vs <code>medium</code> and <code>medium</code> vs <code>high</code> were not significant after correction</li>
+        <li><code>none</code> vs <code>high</code>: significant, p &lt; 0.001</li>
+        <li><code>none</code> vs <code>medium</code>: significant, p = 0.029</li>
+        <li><code>none</code> vs <code>low</code>: not significant after correction, p = 0.15</li>
+        <li>Adjacent steps: <code>low</code> vs <code>medium</code> and <code>medium</code> vs <code>high</code> were not significant after correction</li>
       </ul>
 
       <p>
@@ -92,7 +92,7 @@
       <h2>So what is the best setting?</h2>
 
       <p>
-        For <strong>highest accuracy</strong>, <code>high</code> wins. For <strong>best statistical evidence over no reasoning</strong>, then <code>medium</code> is the cheapest setting that still gives a Holm-significant improvement over <code>none</code>. If you care most about efficiency, <code>low</code> is probably the most interesting setting.
+        For highest accuracy, <code>high</code> wins. For best statistical evidence over no reasoning, then <code>medium</code> is the cheapest setting that still gives a Holm-significant improvement over <code>none</code>. If you care most about efficiency, <code>low</code> is probably the most interesting setting.
       </p>
 
       <p>
@@ -114,15 +114,15 @@
       <h2>How I built this</h2>
 
       <p>
-        <strong>Paired design.</strong> Every case was run through all four variants. This means I can use McNemar's test (paired binary outcomes) instead of comparing independent samples. That is a more powerful comparison and it is the right statistical choice for this setup.
+        Every case was run through all four variants. This means I can use McNemar's test (paired binary outcomes) instead of comparing independent samples. That is a more powerful comparison and it is the right statistical choice for this setup.
       </p>
 
       <p>
-        <strong>Immutable outputs.</strong> The raw model responses and grading scores are committed to the repo and never modified by the reporting pipeline. The analysis layer reads from those files and generates everything else. If you want to audit the numbers, the source of truth is right there.
+        The raw model responses and grading scores are committed to the repo and never modified by the reporting pipeline. The analysis layer reads from those files and generates everything else. If you want to audit the numbers, the source of truth is right there.
       </p>
 
       <p>
-        <strong>All-pairs comparison.</strong> Earlier versions of this project only compared adjacent steps. That was too narrow. The current analysis compares every pair, because in practice you are often choosing between <code>none</code> and <code>high</code>, not between <code>medium</code> and <code>high</code>.
+        Earlier versions of this project only compared adjacent steps. That was too narrow. The current analysis compares every pair, because in practice you are often choosing between <code>none</code> and <code>high</code>, not between <code>medium</code> and <code>high</code>.
       </p>
 
       <h2>Limitations</h2>
@@ -132,15 +132,15 @@
       </p>
 
       <p>
-        <strong>Benchmark skew.</strong> MedCaseReasoning is heavily tilted toward complex diagnostic cases from published case reports. These are not representative of the general case mix a clinician sees day to day. The accuracy numbers here are probably lower than what you would see on routine presentations.
+        MedCaseReasoning is heavily tilted toward complex diagnostic cases from published case reports. These are not representative of the general case mix a clinician sees day to day. The accuracy numbers here are probably lower than what you would see on routine presentations.
       </p>
 
       <p>
-        <strong>No physician audit yet.</strong> GPT-4.1 has published physician-agreement data from HealthBench (macro F1 = 0.71) but it has not been validated against physician review on this specific dataset.
+        GPT-4.1 has published physician-agreement data from HealthBench (macro F1 = 0.71) but it has not been validated against physician review on this specific dataset.
       </p>
 
       <p>
-        <strong>Single model family.</strong> This is GPT-5.2 only. I started this project wanting to compare across model families and I still plan to. 
+        This is GPT-5.2 only. I started this project wanting to compare across model families and I still plan to. 
       </p>
 
       <h2>What I would do next</h2>
@@ -167,5 +167,6 @@
   </main>
 </body>
 </html>
+
 
 
