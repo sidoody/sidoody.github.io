@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Compiling the HEART Score into a Model-Facing Rule System</title>
+  <meta name="description" content="A practical look at compiling the HEART Score into an explicit policy artifact with scope rules, layered safety overrides, and a strict JSON output contract.">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <main class="wrap">
+    <p class="backlink"><a href="/">&larr; home</a></p>
+
+    <article>
+      <h1>Compiling the HEART Score into a Model-Facing Rule</h1>
+      <p class="byline">March 25, 2026</p>
+
+      <p>
+        Clinical LLM workflows often mix rule criteria, exceptions, output expectations, and grading into one long prompt. That can work, but once something goes wrong it gets harder to tell whether the problem came from the model, the rule, or the evaluation setup.
+      
+    </p>
+      
+      <p>
+        I used the HEART Score as a small example of what this looks like when the rule is pulled into explicit policy artifacts, paired with a strict output schema, and rerun under a deterministic harness.
+      </p>
+
+      <h2>Why compile a rule?</h2>
+
+      <p>
+        If a rule stays embedded in narrative prose, a lot of the structure remains implicit.
+      </p>
+      
+      <p>
+        Compiling the rule means pulling that logic into named components:
+      </p>
+
+      <ul>
+        <li>Scope Layer: when the rule applies or not.</li>
+        <li>Policy Layer: tiers, dispositions, and safety overrides.</li>
+        <li>The Output Contract: strict JSON schema forcing the model to return structured and inspectable fields.</li>
+      </ul>
+
+      <p>
+        With this approach, when the model misses the error usually lands in a specific field, like component scoring, tier mapping, or a missed safety flag.
+      </p>
+
+      <p>
+        A single large prompt can produce similar behavior. Breaking the rule into explicit artifacts mostly helps with editing, tracing changes, and understanding where failures are coming from.
+      </p>
+
+      <h2>What the first run showed</h2>
+
+      <p>
+        The first run on the 14-case canonical slice came back 9/14 perfect. Most of the misses were from contradictions or omissions in the specification (not model failure):
+      </p>
+
+      <ul>
+        <li>A gold label that conflicted with the pack’s own safety-flag logic.</li>
+        <li>Ambiguity in how to score old Q waves without acute changes.</li>
+        <li>Conflicting instructions around STEMI bypass overrides.</li>
+      </ul>
+
+      <p>
+        After those issues were fixed, the rerun hit 14/14. At that point the artifact felt internally coherent.
+      </p>
+
+      <h2>Dealing with subjective components</h2>
+
+      <p>
+        Not every part of a clinical rule compiles cleanly. Age, troponin, and risk factors are pretty straightforward. The history component is different. “How suspicious is this presentation for ACS?” still involves judgment, and two clinicians can reasonably disagree at the boundary.
+      </p>
+
+      <p>
+        My approach was:
+      </p>
+
+      <ul>
+        <li>Anchoring the extremes: sharp, pleuritic pain anchors a 0. Substernal pressure with diaphoresis anchors a 2. The middle stays a gray zone.</li>
+        <li>Tolerance in grading: the harness grades the total HEART Score with a &plusmn;1 tolerance rather than an exact per-component agreement.</li>
+        <li>Reasoning focus: focus on if the model reaches the correct risk tier and disposition vs if it scored 1 or a 2 to a genuinely ambiguous history.</li>
+      
+    </ul>
+    <p>
+        There are other ways to do this, including few-shot examples or physician calibration.
+      </p>
+
+
+      <h2>Stability under messier inputs</h2>
+
+      <p>
+        I also ran the revised pack against a <code>messy_note</code> slice with noisier, shorthand ED-style inputs. That slice also ran clean, suggesting that once the policy artifact was coherent, behavior remained stable under messier surface forms of the same task.
+      </p>
+
+      <h2>Clinical safety flags</h2>
+
+      <p>
+        The HEART Score can be “Low Risk” while the clinical picture is still concerning, for example, a low total score sitting next to a high troponin. I built a specific <code>troponin_2_with_low_total</code> flag into the pack.
+      </p>
+
+      <p>
+        In practice, that is the kind of case where the score alone is not enough. If the pack does not say that explicitly, the model has to guess.
+      </p>
+
+      <h2>Why this setup is useful</h2>
+
+      <p>
+        What I found useful was having a setup where early failures pointed back to the right layer. In this case, the first run mostly surfaced pack contradictions, missing instructions, and one real scoring ambiguity. Once those were fixed, the rerun behaved the way the revised rule said it should.
+      </p>
+
+      <h2>The repo</h2>
+
+      <p>
+        Repo: <a href="https://github.com/sidoody/heart-context-pack">github.com/sidoody/heart-context-pack</a><br>
+        Walkthrough: <code>/examples/case_walkthrough.md</code>
+      </p>
+
+
+    </article>
+  </main>
+</body>
+</html>
