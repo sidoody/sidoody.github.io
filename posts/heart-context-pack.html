@@ -106,7 +106,15 @@
       <p>
         What I found useful was having a setup where early failures pointed back to the right layer. In this case the first run mostly surfaced pack contradictions, missing instructions, and one scoring ambiguity. Once those were fixed, the rerun behaved the way the revised rule said it should.
       </p>
+      
+      
+      <h2>Limitations</h2>
 
+      <p>
+       The 30/30 result is clean, but the three slices still stay pretty close to the same rule surface and its a very small number of synthetic cases. The holdout and messy-note cases mostly show that the model can handle variation in wording and presentation.  The harness also only catches inconsistencies inside the spec. If the pack and the labels agree on the same wrong logic, the run will still pass cleanly.
+      </p>
+
+      
       <h2>The repo</h2>
 
       <p>
