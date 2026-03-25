@@ -29,7 +29,7 @@
         If the whole rule sits inside one long prompt, it is harder to see which part failed. I found it more useful to split it up: one part says when the rule applies, another says what decision logic to follow, and another defines the output format. Then when something breaks, you can usually tell whether the problem was in scoring, tier assignment, or a safety check.
       </p>
  <p>
-        Compiling the rule means pulling that logic into separate pieces:
+        Here was my specific approach:
     </p>
 
       <ul>
@@ -37,10 +37,6 @@
         <li>Policy Layer: tiers, dispositions, and safety overrides.</li>
         <li>The Output Contract: strict JSON schema forcing the model to return structured and inspectable fields.</li>
       </ul>
-
-      <p>
-        With this approach, when the model misses the error usually lands in a specific field, like component scoring, tier mapping, or a missed safety flag.
-      </p>
 
       <p>
         A single large prompt can produce similar behavior. Breaking the rule into explicit artifacts mostly helps with editing, tracing changes, and understanding where failures are coming from.
