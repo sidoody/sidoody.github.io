@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Evidence Drift: Preserving Guideline Disagreement in Clinical RAG</title>
+  <meta name="description" content="A small, inspectable benchmark for testing whether clinical RAG preserves guideline disagreement, temporal drift, uncertainty, and corpus boundaries.">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <main class="wrap">
+    <p class="backlink"><a href="/">&larr; home</a></p>
+
+    <article>
+      <h1>Evidence Drift: Preserving Guideline Disagreement in Clinical RAG</h1>
+      <p class="byline">July 16, 2026</p>
+
+      <p>
+        Clinical guidelines often differ across professional organizations. A RAG system answering questions about those guidelines needs to preserve that disagreement, instead of simply surfacing the highest scoring source as the recommendation.
+      </p>
+
+      <p>
+        Let’s use this example: a user asks how often an average-risk 48-year-old should receive screening mammography.
+      </p>
+
+      <ul>
+        <li>USPSTF recommends screening every two years</li>
+        <li>ACR recommends annual screening</li>
+        <li>ACOG recommends every one to two years</li>
+        <li>ACS recommends annual screening from ages 45 through 54</li>
+      </ul>
+
+      <p>
+        If we designed a system without attention to this, it could retrieve one source, summarize it accurately, and return a confident answer. Everything in the answer is true, and cited, but ultimately we have false consensus by only using one valid source.
+      </p>
+
+      <p>
+        Evidence Drift is a small, inspectable benchmark for testing whether retrieval preserves four properties of a guideline corpus: disagreement across organizations (primary), changes over time, uncertainty in the recommendations, and explicit corpus boundaries. I used <code>BM25</code>, semantic, and hybrid retrieval in the demonstration.
+      </p>
+
+      <h2>Separating retrieval and generation</h2>
+
+      <p>
+        In this project I separated retrieval and generation to help localize errors and to focus more on the retrieval side. The default output is an evidence map (retrieval) and there is an optional synthesized clinical answer (generation). The focus for the evidence map is to see which passages were retrieved, which organization each came from, whether the source is marked current or superseded, its dates, ranking score, and an absolute support score.
+      </p>
+
+      <h2>What I wanted the benchmark to test</h2>
+
+      <p>
+        I focused on four behaviors:
+      </p>
+
+      <ul>
+        <li><strong>Preserving disagreement.</strong> A comparison question should retrieve the organizations needed to show that recommendations differ.</li>
+        <li><strong>Preserving temporal drift.</strong> A question about how guidance changed should retrieve both the older recommendation and the current one, without presenting the superseded source as current.</li>
+        <li><strong>Preserving uncertainty.</strong> “Insufficient evidence” should be a clear conclusion rather than silently becoming “recommended against.”</li>
+        <li><strong>Respecting corpus boundaries.</strong> When a question falls outside the scope of the average-risk screening corpus, the system should abstain rather than stretch nearby evidence into an answer.</li>
+      </ul>
+
+      <h2>Preventing one organization from crowding out the others</h2>
+
+      <p>
+        A search system usually returns the highest-scoring results. The problem is that several of those results might come from the same organization.
+      </p>
+
+      <p>
+        For example, the system could return three relevant ACOG pages but miss a USPSTF page with a different recommendation. The results would all look correct, but they would not show the full disagreement.
+      </p>
+
+      <p>
+        To reduce this problem, I designed the retriever to first pull the strongest current result from each organization. It then uses the remaining spots for the next best results overall. When the question asks how guidance changed over time, older recommendations can also be included.
+      </p>
+
+      <p>
+        This approach helped find the group of pages needed to show where the organizations agree and disagree and prevented one organization from crowding out others.
+      </p>
+
+      <h2>Support scores and scope guards</h2>
+
+      <p>
+        A retrieval system will always return something first, even when the question has nothing to do with the available documents. The first result may be the best match in the corpus while still being a weak match overall.
+      </p>
+
+      <p>
+        To prevent the system from answering with weak or irrelevant evidence, I added two ways for it to abstain.
+      </p>
+
+      <ul>
+        <li><strong>Explicit scope guard.</strong> Some questions are clearly outside the average-risk screening corpus, including questions about BRCA-associated risk, prior chest radiation, previous breast cancer, pregnancy, male screening, and diagnostic breast symptoms. The system detects these cases and abstains.</li>
+        <li><strong>Support threshold.</strong> Other out-of-scope questions may not match one of those known exclusions. For these, the system checks whether the corpus contains a strong enough match to support an answer.</li>
+      </ul>
+
+      <p>
+        This support score is separate from the score used to rank results. Ranking only tells us which passage is the best of the available options. It does not tell us whether that passage is actually relevant enough. Even an unrelated question will still have a first-place result.
+      </p>
+
+      <p>
+        The support score combines semantic similarity with <code>BM25</code> term matching without rescaling the scores separately for every question. If even the strongest passage falls below the threshold, the system abstains.
+      </p>
+
+      <p>
+        This is a simple, project-specific safeguard rather than a probability that the answer is clinically correct. The threshold was set for this small corpus as an example and would need to be more carefully implemented and tested.
+      </p>
+
+      <h2>What the evaluation showed</h2>
+
+      <p>
+        The benchmark includes 12 canonical cases and 8 frozen holdout cases. On this small, single-author benchmark, the default hybrid configuration retrieved the complete expected evidence sets and handled every abstention decision across both slices correctly.
+      </p>
+
+      <p>
+        I also compared <code>BM25</code>, semantic, and hybrid retrieval. The semantic baseline here uses a local <code>HashingVectorizer</code> rather than a production embedding model, so I would not treat this comparison as a general retrieval bake-off. There was no “hybrid wins everything” result. <code>BM25</code> performed especially well on the small, terminology-heavy parts of the corpus, while semantic retrieval handled some holdout cases better.
+      </p>
+
+      <p>
+        I also scored abstention separately from retrieval recall. For answerable questions, the benchmark checks whether the complete required evidence set was retrieved. For out-of-scope questions, it checks whether the system abstained.
+      </p>
+
+      <h2>What this setup helped expose</h2>
+
+      <p>
+        This setup helped see which layer could cause a miss, including:
+      </p>
+
+      <ul>
+        <li>Source metadata and chunking</li>
+        <li>Retrieval and organization diversity</li>
+        <li>Scope and abstention logic</li>
+      </ul>
+
+      <p>
+        Instead of eyeballing an answer, with this approach you can ask more specific questions. Did the system retrieve all four current organizations? Did it include the superseded USPSTF recommendation when the question asked how guidelines changed? Did it abstain because the question was out of scope, or because it couldn’t reach the support threshold?
+      </p>
+
+      <h2>Limitations</h2>
+
+      <p>
+        The corpus contains seven short summaries of guidelines with metadata (not the complete source guidelines) and the benchmark only looks at 20 questions. The explicit scope guard is a nice example but pretty narrow, and the current way it is written is hard to generalize across other types of questions. The retrieval metrics only show whether expected documents appeared. I intentionally kept generation minimal, so the benchmark does not evaluate whether each generated claim is supported by what is cited.
+      </p>
+
+      <h2>Why this project was useful</h2>
+
+      <p>
+        This is one approach to building a retrieval system in clinical AI where documents and sources such as guidelines differ. A lot of times there is no one clean answer, and you need your retriever to preserve that disagreement and be testable.
+      </p>
+
+      <h2>The repo</h2>
+
+      <p>
+        Repo: <a href="https://github.com/sidoody/evidence-drift-rag">github.com/sidoody/evidence-drift-rag</a>
+      </p>
+
+      <p>
+        The default setup runs locally without an API key and includes the corpus, canonical and frozen-holdout slices, retrieval ablations, tracked regression snapshots, tests, a CLI, and a Streamlit interface.
+      </p>
+
+      <p>
+        Research demonstration only. Not medical advice, not a validated clinical tool, and not intended for patient care.
+      </p>
+
+    </article>
+  </main>
+</body>
+</html>
